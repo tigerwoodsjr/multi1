@@ -4,7 +4,8 @@ library(tidyverse)
 
 
 
-tickers <- RTLedu::sp400_prices
+mcap <- RTLedu::sp400_desc %>% 
+  select(symbol, company, shares_held, sector, weight)
 ticker <- unique(tickers$symbol)
 
 

@@ -10,65 +10,31 @@
 library(shiny)
 library (plotly)
 
-
-
-
-
-
 # Define server logic required to draw a histogram
 function(input, output, session) {
-
-    # output$distPlot <- renderPlot({
-    # 
-    #     # generate bins based on input$bins from ui.R
-    #     
-    # 
-    #     # draw the histogram with the specified number of bins
-    #     #plot timeseries of stock w
-    #     
-    # 
-    # })
+  
     output$distPlot <- renderPlotly({
-
-    # selected_pick <- tidyquant::tq_get(input$tks, 
-    #                          get = "stock.prices", 
-    #                          from = Sys.Date() - 365, 
-    #                          to = Sys.Date())
-    snp <- tidyquant::tq_get(ticker, 
-                             get = "stock.prices", 
-                             from = Sys.Date() - 365, 
-                             to = Sys.Date())
-    
-    
-    mcap <- RTLedu::sp400_desc %>% 
-      select(symbol, shares_held, sector)
-    
-    joined <- snp %>% 
-      group_by(symbol) %>%
-      arrange(desc(date)) %>%
-      slice(1) %>% 
-      left_join(mcap, by = "symbol") %>% 
-      mutate(mk = shares_held * adjusted) %>%
-      select(symbol, date, adjusted, mk, sector)
-    
-    input_sector <- joined %>% 
+      
+    input_sector <- mcap %>% 
       dplyr::filter(symbol == input$tks) %>%
       pull(sector)
     
-    toptwo <- joined %>% 
+    toptwo <- mcap %>% 
       filter(sector == input_sector) %>%
-      arrange(desc(mk)) %>% 
+      arrange(desc(weight)) %>% 
       head(2) %>% 
       pull(symbol)
     
+    selected_pick <- tidyquant::tq_get(c(input$tks, toptwo),
+                             get = "stock.prices",
+                             from = Sys.Date() - 365,
+                             to = Sys.Date())
     
-    p1 <- snp %>% 
-      filter(symbol == input$tks) %>% 
-      plot_ly( x = ~date, y = ~adjusted, name = "S&P 400") %>%
+    p1 <- plot_ly(data = selected_pick %>% filter(symbol == input$tks), x = ~date, y = ~adjusted, name = input$tks) %>%
       add_lines() %>%
-      add_lines(data = snp %>% filter(symbol == toptwo[1]), y = ~adjusted, name = toptwo[1]) %>%
-      add_lines(data = snp %>% filter(symbol == toptwo[2]), y = ~adjusted, name = toptwo[2]) %>%
-      layout(title = "",
+      add_lines(data = selected_pick %>% filter(symbol == toptwo[1]), y = ~adjusted, name = toptwo[1]) %>%
+      add_lines(data = selected_pick %>% filter(symbol == toptwo[2]), y = ~adjusted, name = toptwo[2]) %>%
+      layout(title = paste0(input$tks, " vs. Top Two Holdings in ", input_sector),
              xaxis = list(title = "Date"),
              yaxis = list(title = "Price"))
     p1
