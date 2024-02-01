@@ -12,8 +12,7 @@ library (plotly)
 
 # Define server logic required to draw a histogram
 function(input, output, session) {
-  
-    output$distPlot <- renderPlotly({
+    ticker_data <- reactive({
       
     input_sector <- mcap %>% 
       dplyr::filter(symbol == input$tks) %>%
@@ -25,16 +24,20 @@ function(input, output, session) {
       head(2) %>% 
       pull(symbol)
     
-    selected_pick <- tidyquant::tq_get(c(input$tks, toptwo),
-                             get = "stock.prices",
-                             from = Sys.Date() - 365,
-                             to = Sys.Date())
+    tq_pull <- append(input$tks, toptwo) %>% 
+      unique()
     
-    p1 <- plot_ly(data = selected_pick %>% filter(symbol == input$tks), x = ~date, y = ~adjusted, name = input$tks) %>%
+    tidyquant::tq_get(tq_pull,
+                           get = "stock.prices",
+                           from = Sys.Date() - 365,
+                           to = Sys.Date())
+    }
+    )
+    
+    output$distPlot <- renderPlotly({
+    p1 <- plot_ly(data = ticker_data(),  x = ~date, y = ~adjusted, color = ~ symbol) %>%
       add_lines() %>%
-      add_lines(data = selected_pick %>% filter(symbol == toptwo[1]), y = ~adjusted, name = toptwo[1]) %>%
-      add_lines(data = selected_pick %>% filter(symbol == toptwo[2]), y = ~adjusted, name = toptwo[2]) %>%
-      layout(title = paste0(input$tks, " vs. Top Two Holdings in ", input_sector),
+      layout(title = paste0(input$tks, " vs. Top Two Holdings in ", mcap %>% filter(symbol == input$tks) %>% pull(sector)),
              xaxis = list(title = "Date"),
              yaxis = list(title = "Price"))
     p1
